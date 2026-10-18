@@ -28,3 +28,10 @@ kernel/ user/ ...     xv6 sources (on the hwN branches)
 ## Commit style
 
 `hw1: add trace syscall`, `docs(hw1): problem 2 answer`.
+
+## License and copying
+
+- xv6 sources (everything outside `docs/`) are MIT-licensed, see [LICENSE](LICENSE).
+- **`docs/` is all rights reserved** ([docs/LICENSE](docs/LICENSE)): the homework
+  answers and LaTeX sources may not be copied, reused or submitted as someone
+  else's work. Course handouts in `docs/*/pre_provided/` belong to their owners.
