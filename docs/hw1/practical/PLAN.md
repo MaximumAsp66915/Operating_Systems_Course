@@ -5,8 +5,8 @@ followed by a plan. No written report is required for the practical part, but
 **every step needs a screenshot or recording, committed and pushed**.
 
 General rules from page 1: everything is submitted as `HW1_<id1>_<id2>.zip` containing
-the practical outputs and the theory PDF. Submission must be in Persian only for the
-theory part (English = zero). Collect screenshots, videos and sources in one folder.
+the practical outputs and the theory PDF. Submitting in English (even partly) gives zero, so the
+written answers must be Persian. Collect screenshots, videos and sources in one folder.
 
 ---
 
