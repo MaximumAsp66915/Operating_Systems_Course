@@ -2,7 +2,7 @@
 
 Homeworks (2-person team) for the Operating Systems course, built on a pinned
 commit of MIT's [xv6-riscv](https://github.com/mit-pdos/xv6-riscv).
-The original xv6 readme is kept in `README.xv6`.
+The original xv6 readme is kept in `README` (needed by the xv6 Makefile for fs.img).
 
 ## Branch / tag model
 
