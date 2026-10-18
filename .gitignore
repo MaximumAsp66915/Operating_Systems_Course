@@ -16,3 +16,19 @@ kernel/kernel
 user/usys.S
 .gdbinit
 TAGS
+
+# LaTeX build output
+docs/**/*.aux
+docs/**/*.log
+docs/**/*.fls
+docs/**/*.fdb_latexmk
+docs/**/*.xdv
+docs/**/*.toc
+docs/**/*.out
+docs/**/*.synctex.gz
+docs/**/latex/main.pdf
+
+# local recordings
+recordings/
+*.mkv
+*.mp4
