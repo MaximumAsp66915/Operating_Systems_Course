@@ -107,3 +107,17 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+// return a^b, for non-negative a and b (result fits in 32 bits)
+uint64
+sys_power(void)
+{
+  int a, b;
+  uint32 r = 1;
+
+  argint(0, &a);
+  argint(1, &b);
+  while(b-- > 0)
+    r *= a;
+  return r;
+}
