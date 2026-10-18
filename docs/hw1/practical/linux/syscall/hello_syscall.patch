@@ -1,0 +1,14 @@
+Apply by hand inside the linux-6.1.189 source tree (it is only 2 small edits).
+
+1) arch/x86/entry/syscalls/syscall_64.tbl
+   After the last "common" line (450 set_mempolicy_home_node) add:
+
+451	common	hello_syscall		sys_hello_syscall
+
+2) kernel/sys.c   (append at the end of the file)
+
+SYSCALL_DEFINE0(hello_syscall)
+{
+	printk(KERN_INFO "hello_syscall: Hello from the kernel!\n");
+	return 42;
+}
