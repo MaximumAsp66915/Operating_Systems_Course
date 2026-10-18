@@ -32,3 +32,14 @@ docs/**/latex/main.pdf
 recordings/
 *.mkv
 *.mp4
+
+# More LaTeX byproducts (BibTeX, lists, beamer)
+docs/**/*.bbl
+docs/**/*.blg
+docs/**/*.lof
+docs/**/*.lot
+docs/**/*.nav
+docs/**/*.snm
+docs/**/*.vrb
+docs/**/*.xdv
+docs/**/*.pdf_tex
