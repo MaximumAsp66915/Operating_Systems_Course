@@ -140,7 +140,7 @@ UPROGS=\
 	$U/_wc\
 	$U/_zombie\
 	$U/_hello\
-	$U/_power\
+	$U/_power\pizza
 	$U/_logstress\
 	$U/_forphan\
 	$U/_dorphan\
