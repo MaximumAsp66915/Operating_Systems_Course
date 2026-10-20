@@ -43,3 +43,6 @@ docs/**/*.snm
 docs/**/*.vrb
 docs/**/*.xdv
 docs/**/*.pdf_tex
+
+# not submitted
+docs/**/practical/
