@@ -1,21 +1,17 @@
 % !TeX program = xelatex
 \documentclass[11pt,a4paper]{article}
 
-\input{atl/atl-keys}                      % ۱. کلیدهای پیکربندی
-\atlset{language=fa, category=homework,   % ۲. مشخصات این قالب (آزادانه تغییر دهید)
+\input{atl/atl-keys}
+\atlset{language=fa, category=homework,
         titlepage=block, margins=normal, linespread=1.2,
-        infofields={author,studentid,course,instructor,duedate},
+        infofields={author,studentid,authortwo,studentidtwo,course,instructor,duedate},
         title={تمرین}, date={}}
-\input{config}                            % ۳. مقادیر شما (به‌وسیلهٔ mktex نوشته می‌شود)
-\input{atl/atl}                           % ۴. موتور قالب
-\input{preamble/local}                    % ۵. ماکروها و تنظیمات شخصی شما
+\input{config}
+\input{atl/atl}
+\input{preamble/local}
 
 \begin{document}
 \atlmaketitle
-
-\begin{notebox}[راهنمای خواندن]
-در انتهای هر بخش «منبع» آمده است. عبارت «اسلاید» یعنی پاسخ بر پایهٔ اسلایدهای فصل ۱ (مقدمه) و فصل ۲ (ساختار سیستم‌عامل) نوشته شده است و عبارت «تکمیلی» یعنی آن مطلب در اسلایدها نبوده و پاسخ از دانش درسی (کتاب سیلبرشاتس، مستندات لینوکس و مقالات مربوط) تکمیل شده است.
-\end{notebox}
 
 \input{sections/problem-1}
 \input{sections/problem-2}
