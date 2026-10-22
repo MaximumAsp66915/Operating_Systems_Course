@@ -1,0 +1,36 @@
+\section{روش آزمایش و محیط‌ها}
+برای مقایسهٔ سه محیط اجرا (\lr{Bare Metal}، ماشین مجازی و کانتینر \lr{Docker}) از ابزار \lr{sysbench} و سه بار کاری استفاده شد: فشرده از نظر پردازنده (\lr{cpu})، فشرده از نظر حافظه (\lr{memory}) و فشرده از نظر ورودی/خروجی (\lr{fileio}، نوشتن ترتیبی). هر آزمایش در هر محیط \textbf{سه بار} تکرار شد. در نمودارها میانگین سه تکرار به‌صورت ستون، انحراف معیار به‌صورت میلهٔ خطا و نتیجهٔ هر تکرار به‌صورت نقطهٔ سیاه نشان داده شده است. واحد تأخیرها میلی‌ثانیه (\lr{ms}) است.
+
+\begin{notebox}[توجه]
+محیط \lr{Bare Metal} در این آزمایش با \lr{WSL} اجرا شده است. \lr{WSL} خود روی یک لایهٔ مجازی‌سازی (\lr{Hyper-V}) اجرا می‌شود، پس این محیط «\lr{Bare Metal} خالص» نیست و این موضوع در تفسیر نتایج (به‌ویژه \lr{fileio}) اهمیت دارد.
+\end{notebox}
+
+\subsection{دستورهای آزمون}
+\begin{codebox}{bash}
+sysbench cpu --threads=4 --cpu-max-prime=2000000 --percentile=99 run
+sysbench memory --memory-total-size=20G --memory-access-mode=rnd run
+sysbench fileio --file-total-size=4G prepare
+sysbench fileio --file-total-size=4G --file-test-mode=seqwr --percentile=99 run
+sysbench fileio --file-total-size=4G cleanup
+\end{codebox}
+
+\subsection{مشخصات محیط‌ها}
+\begin{center}
+\begin{tabular}{llll}
+\toprule
+محیط & پردازنده & حافظه & ذخیره‌سازی در \lr{fileio} \\
+\midrule
+\lr{Bare Metal (WSL)} & ۸ پردازندهٔ منطقی (میزبان) & --- & سیستم‌فایل \lr{WSL} \\
+\lr{VM} & \lr{vCPU} ۴ & حدود ۳۵ گیگابایت & دیسک مجازی ماشین \\
+\lr{Docker} & ۸ پردازندهٔ منطقی (مشترک با میزبان) & --- & سیستم‌فایل کانتینر \\
+\bottomrule
+\end{tabular}
+\end{center}
+آزمون \lr{cpu} در هر سه محیط با ۴ نخ (\code{--threads=4}) اجرا شد.
+
+\subsection{کار هر آزمون و پیش‌بینی}
+\begin{itemize}
+  \item \textbf{\lr{cpu}:} عدد‌های اول تا ۲۰۰۰۰۰۰ را با ۴ نخ می‌شمارد و فقط پردازنده را درگیر می‌کند. پیش‌بینی: هر سه محیط تقریباً برابر باشند، چون کد پردازشی مستقیماً روی \lr{CPU} اجرا می‌شود؛ در \lr{VM} فقط کمی تأخیر بیشتر (زمان‌بندی دو لایه).
+  \item \textbf{\lr{memory}:} ۲۰ گیگابایت را به‌صورت تصادفی در حافظه می‌خواند و می‌نویسد و توان عملیاتی را می‌سنجد. پیش‌بینی: تقریباً برابر؛ در \lr{VM} کمی کندتر به‌دلیل ترجمهٔ دو سطحی آدرس.
+  \item \textbf{\lr{fileio}:} ۴ گیگابایت فایل را به‌صورت ترتیبی می‌نویسد. پیش‌بینی: \lr{Bare Metal} سریع‌ترین، \lr{Docker} نزدیک به آن (لایهٔ \lr{overlayfs}) و \lr{VM} کندترین (دیسک مجازی و خروج از حالت میهمان).
+\end{itemize}

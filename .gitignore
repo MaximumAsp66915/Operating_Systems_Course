@@ -46,3 +46,5 @@ docs/**/*.pdf_tex
 
 # not submitted
 docs/**/practical/
+docs/**/latex_part2/main.pdf
+docs/**/*.listing

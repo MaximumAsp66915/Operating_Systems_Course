@@ -1,0 +1,22 @@
+% !TeX program = xelatex
+\documentclass[11pt,a4paper]{article}
+
+\input{atl/atl-keys}
+\atlset{language=fa, category=homework,
+        titlepage=block, margins=normal, linespread=1.2,
+        infofields={author,studentid,authortwo,studentidtwo,course,instructor,duedate},
+        title={تمرین}, date={}}
+\input{config}
+\input{atl/atl}
+\input{preamble/local}
+
+\begin{document}
+\atlmaketitle
+
+\input{sections/docker}
+\input{sections/environments}
+\input{sections/cpu}
+\input{sections/memory}
+\input{sections/io}
+\input{sections/summary}
+\end{document}

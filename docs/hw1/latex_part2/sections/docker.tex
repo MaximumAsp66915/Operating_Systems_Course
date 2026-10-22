@@ -1,0 +1,76 @@
+\section{داکر: نصب، تصویر و کانتینر}
+همهٔ دستورها در یک پوستهٔ لینوکس (اوبونتو ۲۴.۰۴ روی \lr{WSL}) اجرا شده‌اند و خروجی‌ها از ضبط صفحه برداشته شده است.
+
+\subsection{نصب \lr{Docker Engine}}
+\begin{codebox}{bash}
+$ docker --version
+Docker version 29.1.3, build 29.1.3-0ubuntu3~24.04.2
+$ docker info
+ ...
+ Architecture: x86_64
+ CPUs: 8
+ Total Memory: 15.546GiB
+ Docker Root Dir: /var/lib/docker
+ ...
+$ docker run --rm hello-world
+Hello from Docker!
+This message shows that your installation appears to be working correctly.
+\end{codebox}
+
+\subsection{تصویر و کانتینر}
+\begin{codebox}{bash}
+$ docker pull ubuntu:24.04
+24.04: Pulling from library/ubuntu
+Status: Image is up to date for ubuntu:24.04
+docker.io/library/ubuntu:24.04
+$ docker images
+IMAGE               ID             DISK USAGE   CONTENT SIZE
+hello-world:latest  11a3eb1597e8   25.9kB       9.49kB
+ubuntu:24.04        68ee22004a91   119MB        31.7MB
+$ docker run -it --name os ubuntu:24.04 bash
+root@c8f0ad5e7163:/# uname -r
+6.18.54.1-microsoft-standard-WSL2
+root@c8f0ad5e7163:/# cat /etc/os-release
+PRETTY_NAME="Ubuntu 24.04.5 LTS"
+NAME="Ubuntu"
+VERSION_ID="24.04"
+VERSION="24.04.5 LTS (Noble Numbat)"
+VERSION_CODENAME=noble
+ID=ubuntu
+ID_LIKE=debian
+root@c8f0ad5e7163:/# touch /tmp/os.text
+root@c8f0ad5e7163:/# ls -l /tmp/os.text
+-rw-r--r-- 1 root root 0 Oct 21 22:06 /tmp/os.text
+root@c8f0ad5e7163:/# exit
+\end{codebox}
+هستهٔ گزارش‌شده درون کانتینر (\code{6.18.54.1-microsoft-standard-WSL2}) هستهٔ میزبان است و نه هسته‌ای از خود تصویر؛ این نکته در ادامه برای تفسیر سربار کانتینر مهم است.
+
+\subsection{مدیریت چرخهٔ عمر کانتینر}
+\begin{codebox}{bash}
+$ docker ps -a
+CONTAINER ID  IMAGE         COMMAND  CREATED             STATUS
+c8f0ad5e7163  ubuntu:24.04  "bash"   About a minute ago  Exited (0) 16 seconds ago   os
+$ docker start -ai os
+root@c8f0ad5e7163:/# ls -l /tmp/os.text
+-rw-r--r-- 1 root root 0 Oct 21 22:06 /tmp/os.text
+root@c8f0ad5e7163:/# exit
+$ docker run -d --name os-bg ubuntu:24.04 sleep 600
+6a78f62f8fad0cc8f552ffa35df676b17a95b7c358ac4fe698b227d44d60c3a9
+$ docker ps
+CONTAINER ID  IMAGE         COMMAND      CREATED         STATUS         NAMES
+6a78f62f8fad  ubuntu:24.04  "sleep 600"  6 seconds ago   Up 6 seconds   os-bg
+$ docker stop os-bg
+os-bg
+$ docker start os-bg
+os-bg
+$ docker stop os-bg
+os-bg
+$ docker rm os-bg
+os-bg
+$ docker rm os
+os
+\end{codebox}
+پس از خروج از پوسته و راه‌اندازی دوبارهٔ \code{os} فایل ساخته‌شده هنوز وجود دارد.
+
+\paragraph{پرسش: تفاوت \lr{Image} و \lr{Container} چیست؟ چرا خروج از شل کانتینر را متوقف می‌کند ولی فایل پس از راه‌اندازی مجدد می‌ماند؟}
+\lr{Image} قالبی فقط‌خواندنی و لایه‌ای است که فایل‌سیستم و تنظیمات اجرا را نگه می‌دارد؛ \lr{Container} یک نمونهٔ اجراشده (یا متوقف‌شده) از آن است که یک لایهٔ نوشتنی نازک و یک پردازه دارد. کانتینر تا وقتی پردازهٔ اصلی‌اش (اینجا \code{bash}) زنده است کار می‌کند، پس با \code{exit} متوقف می‌شود. اما حذف نشده است و لایهٔ نوشتنی‌اش تا اجرای \code{docker rm} باقی می‌ماند؛ به همین دلیل فایل پس از \code{docker start} هنوز هست.
