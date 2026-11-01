@@ -127,6 +127,7 @@ UPROGS=\
 	$U/_pingpong\
 	$U/_race\
 	$U/_ps\
+	$U/_treeview\
 	$U/_echo\
 	$U/_forktest\
 	$U/_grep\
