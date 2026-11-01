@@ -123,6 +123,9 @@ allocproc(void)
 
 found:
   p->pid = allocpid();
+  acquire(&tickslock);
+  p->birth = ticks;
+  release(&tickslock);
   p->state = USED;
 
   // Allocate a trapframe page.
@@ -147,6 +150,160 @@ found:
   p->context.sp = p->kstack + PGSIZE;
 
   return p;
+}
+
+// Convert the internal process state into the text
+// requested by the assignment.
+static void
+pinfo_state_name(char *dst, enum procstate state)
+{
+    switch (state) {
+    case USED:
+        safestrcpy(dst, "used", 10);
+        break;
+    case SLEEPING:
+        safestrcpy(dst, "sleeping", 10);
+        break;
+    case RUNNABLE:
+        safestrcpy(dst, "runnable", 10);
+        break;
+    case RUNNING:
+        safestrcpy(dst, "running", 10);
+        break;
+    case ZOMBIE:
+        safestrcpy(dst, "zombie", 10);
+        break;
+    default:
+        safestrcpy(dst, "unknown", 10);
+        break;
+    }
+}
+
+// Internal kernel implementation of the getpinfo system call.
+// user_addr is the address of the array in the calling
+// process's user memory. We use copyout() rather than
+// directly dereferencing that user address.
+int
+getpinfo(uint64 user_addr, int max)
+{
+    struct proc *p;
+    struct pinfo info;
+    int total = 0;
+    int copied = 0;
+    uint64 now;
+    if (user_addr == 0 || max < 0)
+        return -1;
+
+    acquire(&wait_lock);
+    acquire(&tickslock);
+    now = ticks;
+    release(&tickslock);
+    for (p = proc; p < &proc[NPROC]; p++) {
+        acquire(&p->lock);
+
+        if (p->state != UNUSED)
+            total++;
+
+        release(&p->lock);
+    }
+    if (total > max) {
+        release(&wait_lock);
+        return -1;
+    }
+    for (p = proc; p < &proc[NPROC]; p++) {
+        acquire(&p->lock);
+        if (p->state == UNUSED) {
+            release(&p->lock);
+            continue;
+        }
+        info.pid = p->pid;
+
+        if (p->parent == 0)
+            info.ppid = 0;
+        else
+            info.ppid = p->parent->pid;
+        info.age = now - p->birth;
+        pinfo_state_name(info.state, p->state);
+        safestrcpy(info.name, p->name, sizeof(info.name));
+        release(&p->lock);
+        if (copyout(myproc()->pagetable,
+                    user_addr + copied * sizeof(struct pinfo),
+                    (char *)&info,
+                    sizeof(struct pinfo)) < 0) {
+            release(&wait_lock);
+            return -1;
+        }
+        copied++;
+    }
+    release(&wait_lock);
+    return copied;
+}
+
+// Mark a process as killed.
+// This is the same basic operation performed by xv6's
+// ordinary kill system call.
+static void
+mark_process_killed(struct proc *p)
+{
+    p->killed = 1;
+
+    // A sleeping process must be made runnable so it can
+    // notice that it has been killed and exit.
+    if (p->state == SLEEPING)
+        p->state = RUNNABLE;
+}
+
+
+// Kill a process and every descendant of that process.
+// We use a queue of PIDs instead of recursive function calls.
+// This avoids deep kernel call stacks if the process tree
+// contains many generations.
+int
+killtree(int pid)
+{
+    struct proc *p;
+    int queue[NPROC];
+    int head = 0;
+    int tail = 0;
+    int found = 0;
+    acquire(&wait_lock);
+    for (p = proc; p < &proc[NPROC]; p++) {
+        acquire(&p->lock);
+        if (p->state != UNUSED && p->pid == pid) {
+            mark_process_killed(p);
+            found = 1;
+        }
+        release(&p->lock);
+
+        if (found)
+            break;
+    }
+    if (!found) {
+        release(&wait_lock);
+        return -1;
+    }
+    queue[tail++] = pid;
+    while (head < tail) {
+        int parent_pid = queue[head++];
+
+        for (p = proc; p < &proc[NPROC]; p++) {
+            acquire(&p->lock);
+            if (p->state != UNUSED &&
+                p->parent != 0 &&
+                p->parent->pid == parent_pid) {
+                mark_process_killed(p);
+                int child_pid = p->pid;
+                release(&p->lock);
+                if (tail < NPROC)
+                    queue[tail++] = child_pid;
+            } else {
+                release(&p->lock);
+            }
+        }
+    }
+
+    release(&wait_lock);
+    return 0;
 }
 
 // free a proc structure and the data hanging from it,

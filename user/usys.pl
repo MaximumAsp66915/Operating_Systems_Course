@@ -41,3 +41,5 @@ entry("sbrk");
 entry("pause");
 entry("uptime");
 entry("power");
+entry("getpinfo");
+entry("killtree");
