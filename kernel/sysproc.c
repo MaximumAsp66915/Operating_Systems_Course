@@ -115,3 +115,21 @@ sys_power(void)
     r *= a;
   return r;
 }
+
+uint64
+sys_getpinfo(void)
+{
+    uint64 user_addr;
+    int max;
+    argaddr(0, &user_addr);
+    argint(1, &max);
+    return getpinfo(user_addr, max);
+}
+
+uint64
+sys_killtree(void)
+{
+    int pid;
+    argint(0, &pid);
+    return killtree(pid);
+}

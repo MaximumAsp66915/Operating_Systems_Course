@@ -8,3 +8,11 @@ typedef unsigned int  uint32;
 typedef unsigned long uint64;
 
 typedef uint64 pde_t;
+
+struct pinfo {
+    int pid;
+    int ppid;
+    uint64 age;
+    char state[10];
+    char name[16];  
+};
