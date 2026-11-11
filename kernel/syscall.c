@@ -91,6 +91,8 @@ extern uint64 sys_link(void);
 extern uint64 sys_mkdir(void);
 extern uint64 sys_close(void);
 extern uint64 sys_power(void);
+extern uint64 sys_getpinfo(void);
+extern uint64 sys_killtree(void);
 
 
 static uint64 (*syscalls[])(void) = {
@@ -116,6 +118,8 @@ static uint64 (*syscalls[])(void) = {
 [SYS_mkdir]   sys_mkdir,
 [SYS_close]   sys_close,
 [SYS_power]   sys_power,
+[SYS_getpinfo] sys_getpinfo,
+[SYS_killtree] sys_killtree,
 };
 
 void

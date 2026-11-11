@@ -150,6 +150,10 @@ void            uartwrite(char [], int);
 void            uartputc_sync(int);
 int             uartgetc(void);
 
+//ps.c
+int getpinfo(uint64 user_addr, int max);
+int killtree(int pid);
+
 // vm.c
 void            kvminit(void);
 void            kvminithart(void);

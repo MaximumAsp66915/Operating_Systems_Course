@@ -124,6 +124,10 @@ mkfs/mkfs: mkfs/mkfs.c $K/fs.h $K/param.h
 
 UPROGS=\
 	$U/_cat\
+	$U/_pingpong\
+	$U/_race\
+	$U/_ps\
+	$U/_treeview\
 	$U/_echo\
 	$U/_forktest\
 	$U/_grep\
@@ -144,6 +148,8 @@ UPROGS=\
 	$U/_logstress\
 	$U/_forphan\
 	$U/_dorphan\
+	$U/_t_pinfo\
+	$U/_t_killtree
 
 fs.img: mkfs/mkfs README $(UPROGS)
 	mkfs/mkfs fs.img README $(UPROGS)
