@@ -1,0 +1,66 @@
+\section{ریسه‌ها و \lr{pthreads}}
+
+\subsection*{بخش آ – آیا مقدار چاپ‌شده می‌تواند کمتر از ۶۰ باشد؟}
+
+دستور \code{value = value + step} در ماشین سه گام است و \lr{$R_1$} یک ثبات است:
+\begin{codebox}[title={value = value + step}]{bash}
+load  R1, [value]     # (1)
+add   R1, R1, step    # (2)
+store [value], R1     # (3)
+\end{codebox}
+تعویض زمینه، \lr{$R_1$} را در زمینه‌ی ریسه‌ی متوقف‌شده نگه می‌دارد و هنگام ادامه همان مقدار کهنه را برمی‌گرداند؛ پس نتیجه‌ی کهنه روی \code{value} نوشته می‌شود (به‌روزرسانی گم‌شده). \textbf{بله، ممکن است:}
+
+\begin{center}\small\atlrows
+\begin{tabular}{@{}cc>{\raggedleft\arraybackslash}p{8.4cm}c@{}}
+  \rowcolor{atl-primary}\atlhead{گام} & \atlhead{ریسه} & \atlhead{رویداد} & \atlhead{\lr{value}}\\
+  ۱ & \lr{t1} & تکرار ۱: بار، \lr{$R_1=10$}؛ تعویض زمینه & ۱۰\\
+  ۲ & \lr{t2} & تکرارهای ۱ تا ۴۹ & ۱۰۸\\
+  ۳ & \lr{t1} & ادامه با \lr{$R_1=10$}: ذخیره‌ی \mbox{$10+1$} (۴۹ جمع \lr{t2} گم می‌شود)؛ تعویض زمینه & ۱۱\\
+  ۴ & \lr{t2} & تکرار ۵۰: بار، \lr{$R_1=11$}؛ تعویض زمینه & ۱۱\\
+  ۵ & \lr{t1} & تکرارهای ۲ تا ۵۰؛ چاپ ۶۰ & ۶۰\\
+  ۶ & \lr{t2} & ذخیره‌ی \mbox{$11+2$}؛ چاپ \textbf{۱۳} & ۱۳\\
+\end{tabular}
+\end{center}
+
+\subsection*{بخش ب – آیا مقدار نهایی ۱۱ ممکن است؟}
+
+\textbf{خیر؛ کمترین مقدار نهایی ۱۳ است} و سناریوی بخش آ به آن می‌رسد.
+
+دلیل: مقدار نهایی ذخیره‌ی تکرار ۵۰ ریسه‌ی \lr{T} است، یعنی \lr{$r+s_T$} که \lr{$s_T$} گام \lr{T} و \lr{$r$} آخرین مقدار ذخیره‌شده پیش از بار آن تکرار است. پس از اولین ذخیره، \code{value} هرگز زیر ۱۱ نمی‌رود.
+\begin{itemize}
+  \item آخرین ذخیره از ریسه‌ی دیگر: \lr{$r\ge 10+s_U$}، پس \mbox{$r+s_T\ge 10+1+2=13$}.
+  \item آخرین ذخیره از خود \lr{T} (تکرار ۴۹): \lr{$r\ge 11+s_T$}، پس \lr{$r+s_T\ge 13$}.
+\end{itemize}
+
+\subsection*{بخش ج – ارسال \lr{\&s} به ریسه‌ها}
+
+\begin{itemize}
+  \item ریسه‌ها کد، داده‌های سراسری و هیپ را مشترک دارند. پشته‌ها جدا هستند ولی در همان فضای آدرس‌اند. \code{\&s} آدرس \textbf{یک} متغیر روی پشته‌ی \lr{main} است و هر دو ریسه همان را می‌گیرند.
+  \item هر ریسه \code{step} را هنگام شروع خودش می‌خواند و \lr{main} هم‌زمان \code{s} را عوض می‌کند (۱، ۲ و پس از حلقه ۳). پس \mbox{$\mathrm{step}_1\in\{1,2,3\}$} و \mbox{$\mathrm{step}_2\in\{2,3\}$} و همه‌ی ترکیب‌ها ممکن‌اند.
+  \item مقدار نهایی \mbox{$10+50\,(\mathrm{step}_1+\mathrm{step}_2)$} است:
+\end{itemize}
+\begin{center}\small\atlrows
+\begin{tabular}{@{}cc@{}}
+  \rowcolor{atl-primary}\atlhead{\lr{$(\mathrm{step}_1,\mathrm{step}_2)$}} & \atlhead{مقدار نهایی}\\
+  \lr{$(1,2)$} & ۱۶۰\\
+  \lr{$(1,3)$}، \lr{$(2,2)$} & ۲۱۰\\
+  \lr{$(2,3)$}، \lr{$(3,2)$} & ۲۶۰\\
+  \lr{$(3,3)$} & ۳۱۰\\
+\end{tabular}
+\end{center}
+
+\subsection*{بخش د – \lr{pthread\_join} داخل حلقه}
+
+\lr{main} پس از هر \code{pthread\_create} تا پایان ریسه منتظر می‌ماند؛ پس \code{s} هنگام خواندن ریسه عوض نمی‌شود: \mbox{$\mathrm{step}_1=1$}، \mbox{$\mathrm{step}_2=2$} و مقدار نهایی همیشه \textbf{۱۶۰} است.
+
+تفاوت: در (ج) ریسه‌ها موازی‌اند ولی روی \code{s} رقابت دارند و نتیجه نامعین است (۱۶۰ تا ۳۱۰). در (د) نتیجه معین است، ولی ریسه‌ها پشت‌سرهم اجرا می‌شوند و موازی‌کاری از بین می‌رود.
+
+\subsection*{بخش هـ – راه‌حل با حفظ موازی‌کاری}
+
+هر ریسه آرگومان خصوصی خودش را بگیرد، نه آدرس یک متغیر مشترک و در حال تغییر:
+\begin{codebox}[title=fix]{C}
+int steps[2] = {1, 2};
+for (int i = 0; i < 2; i++)
+    pthread_create(&t[i], NULL, worker, &steps[i]);
+\end{codebox}
+\code{steps} تا پایان \code{join} زنده است و کسی آن را عوض نمی‌کند. (روش‌های دیگر: فرستادن خودِ مقدار با \code{(void*)(long)s} یا \code{malloc} جدا برای هر ریسه.)

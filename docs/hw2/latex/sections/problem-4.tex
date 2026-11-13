@@ -1,0 +1,134 @@
+\section{حافظه‌ی اشتراکی \lr{POSIX} و شرایط رقابتی}
+
+نام‌گذاری: پردازه‌ی اولیه \lr{P0} و فرزند مستقیم آن \lr{C1} است. \lr{C1} با اجرای شرط زیر دو پردازه‌ی دیگر می‌سازد، یعنی \lr{C2} و \lr{C3}، که نسبت به \lr{P0} «نوه» به‌شمار می‌آیند:
+\begin{center}\code{if (fork() \&\& fork())}\end{center}
+\code{fork}ها را این‌گونه نام می‌بریم:
+\begin{itemize}
+  \item \lr{F1}: فراخوانی \code{pid\_t p = fork()} (اجراشده در \lr{P0})؛
+  \item \lr{F2}: اولین \code{fork()} در شرط \code{if}؛
+  \item \lr{F3}: دومین \code{fork()} در همان شرط.
+\end{itemize}
+
+\subsection*{بخش الف – درخت پردازه‌ها}
+
+\begin{center}\small\atlrows
+\begin{tabular}{@{}ccc>{\raggedleft\arraybackslash}p{4.4cm}>{\raggedleft\arraybackslash}p{4.4cm}@{}}
+  \rowcolor{atl-primary}\atlhead{فراخوانی} & \atlhead{اجراکننده} & \atlhead{ایجادشده} & \atlhead{بازگشتی در والد} & \atlhead{بازگشتی در فرزند}\\
+  \lr{F1} & \lr{P0} & \lr{C1} & شناسه‌ی \lr{C1} (مثبت): شاخه‌ی \code{else} & ۰: شاخه‌ی \code{if}\\
+  \lr{F2} & \lr{C1} & \lr{C2} & شناسه‌ی \lr{C2}: عملوند دوم هم اجرا می‌شود & ۰: شرط نادرست؛ دومین \code{fork} اجرا نمی‌شود\\
+  \lr{F3} & فقط \lr{C1} & \lr{C3} & شناسه‌ی \lr{C3}: شرط درست & ۰: شرط نادرست\\
+\end{tabular}
+\end{center}
+
+\begin{figure}[ht]\centering
+\begin{LTR}
+\begin{tikzpicture}[x=2.3cm, y=1.7cm]
+  \node[pnode, minimum width=40mm] (p0) at (0,0) {\lr{P0}\\[-1pt]{\scriptsize \lr{wait}، سپس \lr{*counter += 3}، چاپ}};
+  \node[pnode, minimum width=40mm] (c1) at (0,-1.6) {\lr{C1}\\[-1pt]{\scriptsize \lr{*counter += 5}، \lr{*counter *= 2}}\\[-2pt]{\scriptsize \lr{exit(3)}}};
+  \node[pnode, minimum width=34mm] (c2) at (-1.55,-3.4) {\lr{C2}\\[-1pt]{\scriptsize \lr{*counter -= 2}، \lr{exit(7)}}};
+  \node[pnode, minimum width=34mm] (c3) at (1.55,-3.4) {\lr{C3}\\[-1pt]{\scriptsize \lr{*counter -= 2}، \lr{exit(7)}}};
+  \draw[pedge] (p0) -- (c1); \edgelab{p0}{c1}{0.5}{\lr{F1}}
+  \draw[pedge] (c1) -- (c2); \edgelab{c1}{c2}{0.5}{\lr{F2}}
+  \draw[pedge] (c1) -- (c3); \edgelab{c1}{c3}{0.5}{\lr{F3}}
+\end{tikzpicture}
+\end{LTR}
+\caption{درخت پردازه‌ها. \lr{P0} فقط یک فرزند مستقیم (\lr{C1}) دارد.}
+\end{figure}
+
+\textbf{تعداد کل پردازه‌ها: ۴.} حواس‌مان باشد که \lr{C2} فرزندِ \lr{C1} است، نه \lr{P0}.
+
+\subsection*{بخش ب – حافظه‌ی مشترک و شرایط رقابتی}
+
+\code{shm\_open} یک شیء حافظه‌ی مشترک می‌سازد و \code{mmap} با \code{MAP\_SHARED} آن را در فضای آدرس \lr{P0} نگاشت می‌کند. \code{fork} فضای آدرس را کپی می‌کند: متغیرهای معمولی (مثل \code{status}، \code{child\_pid}، و خودِ اشاره‌گر \code{counter}) در هر پردازه نسخه‌ی خصوصی پیدا می‌کنند و تغییرشان برای دیگران دیده نمی‌شود (مانند \code{x} در سؤال ۲). اما نگاشت \code{MAP\_SHARED} به فرزندان به ارث می‌رسد و در هر چهار پردازه به همان صفحه‌ی فیزیکی اشاره می‌کند. پس مقدار \code{*counter} یکی است و هر نوشتن، بی‌درنگ برای همه دیده می‌شود. (اشاره‌گر \code{counter} در هر پردازه جدا کپی شده، اما به یک محل می‌رود.)
+
+شرایط رقابتی (\lr{race condition}) به دو دلیل ممکن است:
+\begin{itemize}
+  \item \textbf{اتمیک‌نبودن:} هر دستور مثل \code{*counter += 5} سه گام دارد: خواندن، محاسبه، نوشتن. اگر دو پردازه هم‌زمان مقدار قدیمی را بخوانند، هرکدام حساب کنند و بنویسند، یکی از دو تغییر گم می‌شود (\lr{lost update}). هیچ قفل یا سمافوری در کار نیست.
+  \item \textbf{جابه‌جاناپذیری عمل‌ها:} حتی اگر هر دستور اتمیک بود، ضرب در ۲ و تفریق ۲ با هم جابه‌جا نمی‌شوند: \mbox{$(15-2)\times 2 = 26$} ولی \mbox{$15\times 2-2 = 28$}. ترتیب اجرای \lr{C1}، \lr{C2} و \lr{C3} را زمان‌بند تعیین می‌کند و نتیجه به آن وابسته است. این دقیقاً تعریف شرایط رقابتی است.
+\end{itemize}
+فقط \code{*counter += 5} در \lr{C1} ایمن است، چون پیش از ساخته‌شدن \lr{C2} و \lr{C3} انجام می‌شود و \lr{P0} هم تا پایان \lr{C1} به \code{counter} دست نمی‌زند. پس وقتی \lr{C2} و \lr{C3} شروع می‌شوند مقدار ۱۵ است.
+
+\subsection*{بخش ج – پایان فرزندان و دریافت وضعیت خروج}
+
+\lr{C1} با \code{exit(3)} و \lr{C2} و \lr{C3} هر دو با \code{exit(7)} پایان می‌یابند؛ \code{shm\_unlink} و \code{return 0} را فقط \lr{P0} اجرا می‌کند (فرزندان پیش از آن \code{exit} می‌کنند).
+
+در \lr{P0}، تابع \code{wait(\&status)} تا پایان یک فرزند \textbf{مستقیم} مسدود می‌ماند، شناسه‌ی آن را برمی‌گرداند و وضعیت پایان را در \code{status} می‌گذارد (کد خروج در بایت دوم و شماره‌ی سیگنال کشنده در بایت اول). ماکروها را روی \code{status} اعمال می‌کنیم:
+\begin{itemize}
+  \item \code{WIFEXITED(status)}: درست است اگر فرزند عادی (با \code{exit} یا \code{return}) تمام شده باشد، نه با سیگنال؛
+  \item \code{WEXITSTATUS(status)}: همان کد خروج (۸ بیت پایین) را بیرون می‌کشد، اینجا ۳.
+\end{itemize}
+حلقه تا وقتی \code{wait} مقدار مثبت برمی‌گرداند ادامه دارد و وقتی فرزندی نمانده باشد (مقدار \lr{$-1$} با \code{ECHILD}) تمام می‌شود. چون \lr{P0} فقط یک فرزند مستقیم دارد، حلقه یک بار اجرا می‌شود و \code{counter} را ۳ واحد زیاد می‌کند؛ دور دوم \code{wait} بلافاصله \lr{$-1$} برمی‌گرداند.
+
+\textbf{خیر، این حلقه وضعیت خروج نوه‌ها را دریافت نمی‌کند.} \lr{C2} و \lr{C3} فرزندان \lr{C1} هستند و \code{wait} فقط فرزندان مستقیم را جمع می‌کند. \lr{C1} هم \code{wait} نمی‌زند، پس کد ۷ آن‌ها هرگز به کسی نمی‌رسد: اگر \lr{C1} زودتر بمیرد، آن دو به \code{init} سپرده می‌شوند و او جمعشان می‌کند؛ اگر دیرتر بمیرد، تا مرگ \lr{C1} زامبی می‌مانند و بعد \code{init} جمعشان می‌کند. (اگر این دو کد هم جمع می‌شد، نتیجه ۱۴ واحد بیشتر می‌شد.)
+
+\subsection*{بخش د – آیا خروجی در همه‌ی اجراها یکسان است؟}
+
+\textbf{خیر.} \lr{P0} فقط منتظر \lr{C1} است و برای \lr{C2} و \lr{C3} صبر نمی‌کند؛ ضمناً سه عمل \lr{C1} (ضرب)، \lr{C2} (تفریق) و \lr{C3} (تفریق) با هم هم‌زمان‌اند و ترتیبشان معلوم نیست. مقدار شروع هنگام این رقابت ۱۵ است. دو ترتیب اجرا با دو خروجی متفاوت:
+\begin{center}\small\atlrows
+\begin{tabular}{@{}>{\raggedleft\arraybackslash}p{7.1cm}>{\raggedleft\arraybackslash}p{6.1cm}@{}}
+  \rowcolor{atl-primary}\atlhead{ترتیب ۱: نوه‌ها پیش از ضرب} & \atlhead{ترتیب ۲: ضرب و چاپ پیش از نوه‌ها}\\
+  \lr{C1}: $10\to15$ & \lr{C1}: $10\to15$\\
+  \lr{C2}: $15\to13$ & \lr{C1}: $15\to30$، \code{exit(3)}\\
+  \lr{C3}: $13\to11$ & \lr{P0}: $30\to33$، چاپ\\
+  \lr{C1}: $11\to22$، \code{exit(3)} & (بعداً \lr{C2} و \lr{C3} مقدار را به ۲۹ می‌رسانند؛ دیگر چاپی نیست)\\
+  \lr{P0}: $22\to25$، چاپ & \\
+  \textbf{خروجی: \lr{Final Result: 25}} & \textbf{خروجی: \lr{Final Result: 33}}\\
+\end{tabular}
+\end{center}
+
+اگر هر دستور را اتمیک فرض کنیم، چاپ‌شده برابر \mbox{$(15-2k)\times 2+3-2m$} است که در آن \lr{$k$} تعداد نوه‌هایی است که پیش از ضرب \lr{C1} کار کرده‌اند و \lr{$m$} تعداد آن‌هایی که پس از ضرب ولی پیش از چاپ \lr{P0} کار کرده‌اند (\lr{$k+m\le 2$}). پس خروجی یکی از مقدارهای ۲۵، ۲۷، ۲۹، ۳۱ و ۳۳ است. اگر اتمیک بودن دستورها را هم کنار بگذاریم، به‌روزرسانی‌های گم‌شده مقدارهای دیگری مثل ۲۴ را هم ممکن می‌کنند. (این بازه را با اجرای آزمایشی برنامه چند ده هزار بار دیده‌ایم: مقدارهای ۲۵، ۲۷، ۲۹، ۳۱ و ۳۳ و یک بار هم ۲۴.)
+
+\subsection*{بخش هـ – اصلاح برنامه برای رسیدن به نتیجه‌ی مستقل از زمان‌بندی}
+
+ترتیب لازم روی \code{counter}: (آ) \lr{C1} پنج واحد اضافه کند؛ (ب) هر نوه ۲ واحد کم کند؛ (ج) پس از پایان هر دو نوه، \lr{C1} مقدار را دو برابر کند؛ (د) \lr{P0} کد خروج فرزند مستقیمش را اضافه کند.
+
+\textbf{نکته‌ی مهم:} اگر فقط در \lr{C1} پیش از ضرب دو \code{wait} بگذاریم، کافی نیست. دو نوه هنوز هم‌زمان \code{*counter -= 2} می‌کنند و چون این دستور اتمیک نیست، هر دو می‌توانند ۱۵ را بخوانند و ۱۳ بنویسند (به‌روزرسانی گم‌شده)؛ نتیجه ۲۹ می‌شود نه ۲۵ (این را با طولانی‌کردن بازه‌ی «خواندن تا نوشتن» آزموده‌ایم). پس نوه‌ها باید \textbf{یکی پس از دیگری} اجرا شوند: \lr{C1} نوه‌ی اول را می‌سازد، منتظر پایانش می‌ماند و بعد نوه‌ی دوم را می‌سازد.
+
+\begin{codebox}[title=main.c (fixed)]{C}
+pid_t p = fork();
+if (p == 0) {                       /* C1 */
+    *counter += 5;                  /* (a) */
+
+    pid_t g1 = fork();
+    if (g1 == 0) {                  /* first grandchild */
+        *counter -= 2;              /* (b) */
+        exit(7);
+    }
+    waitpid(g1, NULL, 0);           /* g1 is completely finished ... */
+
+    pid_t g2 = fork();              /* ... before g2 even exists */
+    if (g2 == 0) {                  /* second grandchild */
+        *counter -= 2;              /* (b) */
+        exit(7);
+    }
+    waitpid(g2, NULL, 0);
+
+    *counter *= 2;                  /* (c) */
+    exit(3);
+} else {                            /* P0: unchanged */
+    int status;
+    pid_t child_pid;
+    while ((child_pid = wait(&status)) > 0)
+        if (WIFEXITED(status))
+            *counter += WEXITSTATUS(status);   /* (d) */
+    printf("Final Result: %d\n", *counter);
+}
+\end{codebox}
+
+شرایط سؤال برقرار است: همچنان ۴ پردازه داریم (\lr{P0}، \lr{C1}، \lr{g1}، \lr{g2})؛ مقدار اولیه، عمل‌های محاسباتی و کدهای خروج (۳ و ۷ و ۷) دست‌نخورده‌اند؛ فقط از \code{fork}، \code{wait}/\code{waitpid} و جابه‌جایی دستورها استفاده شده است.
+
+\textbf{چرا نتیجه از زمان‌بندی مستقل است؟} در هر لحظه حداکثر یک پردازه به \code{counter} دست می‌زند و هر مرحله فقط پس از پایان مرحله‌ی قبل شروع می‌شود؛ زنجیره‌ی پیش‌افتادن‌ها با دو سازوکار تضمین می‌شود: ۱) \code{fork}: فرزند فقط پس از ساخته‌شدن شروع می‌شود و هرچه والد تا آن لحظه نوشته، می‌بیند؛ ۲) \code{exit} و \code{wait}/\code{waitpid}: والد فقط پس از پایان فرزند ادامه می‌دهد و همه‌ی نوشته‌های فرزند را می‌بیند. پس هیچ دو دسترسی هم‌زمان نیست و ترتیب کاملاً ثابت است:
+
+\begin{center}\small\atlrows
+\begin{tabular}{@{}c>{\raggedleft\arraybackslash}p{3cm}>{\raggedleft\arraybackslash}p{4.8cm}c@{}}
+  \rowcolor{atl-primary}\atlhead{گام} & \atlhead{پردازه} & \atlhead{عمل} & \atlhead{مقدار \lr{counter}}\\
+  ۰ & \lr{P0} & مقداردهی اولیه & ۱۰\\
+  ۱ & \lr{C1} & \code{*counter += 5} & ۱۵\\
+  ۲ & \lr{g1} & \code{*counter -= 2} & ۱۳\\
+  ۳ & \lr{g2} & \code{*counter -= 2} & ۱۱\\
+  ۴ & \lr{C1} & \code{*counter *= 2} & ۲۲\\
+  ۵ & \lr{P0} & \code{*counter += 3} (کد خروج \lr{C1}) & ۲۵\\
+\end{tabular}
+\end{center}
+
+مقدار نهایی: \mbox{$\bigl((10+5)-2-2\bigr)\times 2+3=\mathbf{25}$} و خروجی همیشه \lr{Final Result: 25} است.

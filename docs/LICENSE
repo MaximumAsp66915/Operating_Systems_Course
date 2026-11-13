@@ -1,0 +1,10 @@
+Copyright (c) 2026 MaximumAsp66915 and teammate. All rights reserved.
+
+The contents of the docs/ directory (homework answers, LaTeX sources, figures
+and write-ups) are NOT licensed for copying, redistribution, modification or
+submission as anyone else's work. Viewing is permitted; any other use requires
+the authors' written permission.
+
+Exceptions: third-party course material under docs/*/pre_provided/ belongs to
+its original owners, and the xv6 sources outside docs/ remain under the MIT
+license in the top-level LICENSE file.

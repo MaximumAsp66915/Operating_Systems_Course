@@ -16,3 +16,35 @@ kernel/kernel
 user/usys.S
 .gdbinit
 TAGS
+
+# LaTeX build output
+docs/**/*.aux
+docs/**/*.log
+docs/**/*.fls
+docs/**/*.fdb_latexmk
+docs/**/*.xdv
+docs/**/*.toc
+docs/**/*.out
+docs/**/*.synctex.gz
+docs/**/latex/main.pdf
+
+# local recordings
+recordings/
+*.mkv
+*.mp4
+
+# More LaTeX byproducts (BibTeX, lists, beamer)
+docs/**/*.bbl
+docs/**/*.blg
+docs/**/*.lof
+docs/**/*.lot
+docs/**/*.nav
+docs/**/*.snm
+docs/**/*.vrb
+docs/**/*.xdv
+docs/**/*.pdf_tex
+
+# not submitted
+docs/**/practical/
+docs/**/latex_part2/main.pdf
+docs/**/*.listing

@@ -1,0 +1,106 @@
+\section{درخت پردازه‌ها و خروجی برنامه‌ی \lr{fork}}
+
+در این سؤال خروجی بدون بافر است، پس هر \code{printf} یک رویداد اتمیک و جداست. برای سادگی \code{fork}ها را نام‌گذاری می‌کنیم:
+\begin{itemize}
+  \item \lr{F1}: فراخوانی \code{pid\_t p = fork()} در ابتدای \code{main}؛
+  \item \lr{F2}: اولین \code{fork()} در شرط \code{if (fork() \&\& fork())}؛
+  \item \lr{F3}: دومین \code{fork()} در همان شرط.
+\end{itemize}
+در عبارت \code{a \&\& b} ابتدا \code{a} ارزیابی می‌شود و فقط اگر درست (ناصفر) بود \code{b} هم اجرا می‌شود (ارزیابی میان‌بُر). \code{fork()} در والد شناسه‌ی فرزند (عددی مثبت، یعنی «درست») و در فرزند صفر («نادرست») برمی‌گرداند. پردازه‌ی اولیه را \lr{P}، فرزند \lr{F1} را \lr{C} می‌نامیم.
+
+\subsection*{بخش الف – درخت پردازه‌ها}
+
+\begin{center}\small\atlrows
+\begin{tabular}{@{}c>{\raggedleft\arraybackslash}p{2.2cm}c>{\raggedleft\arraybackslash}p{4.1cm}>{\raggedleft\arraybackslash}p{4.4cm}@{}}
+  \rowcolor{atl-primary}\atlhead{فراخوانی} & \atlhead{اجراکننده} & \atlhead{ایجادشده} & \atlhead{مقدار بازگشتی در والد} & \atlhead{مقدار بازگشتی در فرزند}\\
+  \lr{F1} & \lr{P} & \lr{C} & شناسه‌ی \lr{C} (مثبت): شاخه‌ی \code{else} & ۰: شاخه‌ی \code{if}\\
+  \lr{F2} & \lr{C} & \lr{C1} & شناسه‌ی \lr{C1}: عملوند دوم هم اجرا می‌شود & ۰: شرط نادرست؛ \lr{F3} اجرا \textbf{نمی‌شود}\\
+  \lr{F3} & فقط \lr{C} & \lr{C2} & شناسه‌ی \lr{C2}: شرط درست & ۰: شرط نادرست\\
+\end{tabular}
+\end{center}
+
+\begin{figure}[ht]\centering
+\begin{LTR}
+\begin{tikzpicture}[x=2.1cm, y=1.55cm]
+  \node[pnode, minimum width=24mm] (p) at (0,0) {\lr{P}\\[-1pt]{\scriptsize \lr{x=2}، چاپ \lr{P:2}}};
+  \node[pnode, minimum width=24mm] (c) at (0,-1.5) {\lr{C}\\[-1pt]{\scriptsize \lr{x=6}، چاپ \lr{C:6}}};
+  \node[pnode, minimum width=24mm] (c1) at (-1.5,-3) {\lr{C1}\\[-1pt]{\scriptsize \lr{x=7}، چاپ \lr{C:7}}};
+  \node[pnode, minimum width=24mm] (c2) at (1.5,-3) {\lr{C2}\\[-1pt]{\scriptsize \lr{x=7}، چاپ \lr{C:7}}};
+  \draw[pedge] (p) -- (c); \edgelab{p}{c}{0.5}{\lr{F1}}
+  \draw[pedge] (c) -- (c1); \edgelab{c}{c1}{0.5}{\lr{F2}}
+  \draw[pedge] (c) -- (c2); \edgelab{c}{c2}{0.5}{\lr{F3}}
+\end{tikzpicture}
+\end{LTR}
+\caption{درخت پردازه‌ها برای \code{\&\&}. تعداد کل پردازه‌ها (با احتساب پردازه‌ی اولیه) برابر ۴ است.}
+\end{figure}
+
+\textbf{تعداد کل پردازه‌ها: ۴} (\lr{P}، \lr{C}، \lr{C1}، \lr{C2}). \lr{C1} با \lr{F2} و \lr{C2} با \lr{F3} ساخته می‌شود و هر دو فرزند \lr{C} هستند (نه فرزند هم)؛ \lr{C1} هرگز \lr{F3} را اجرا نمی‌کند، چون عملوند چپ در آن صفر است.
+
+\subsection*{بخش ب – خطوط چاپ‌شده}
+
+مقدار \code{x}: در \lr{C} برابر \mbox{$2+3=5$} پیش از \code{fork}ها. \lr{C} هر دو \code{fork} را مثبت می‌گیرد و \code{x += 1} می‌کند، پس \mbox{$x=6$}. \lr{C1} و \lr{C2} هر دو شرط را نادرست می‌بینند و \code{x += 2} می‌کنند، پس \lr{$x=7$}.
+
+\begin{center}\small\atlrows
+\begin{tabular}{@{}c>{\raggedleft\arraybackslash}p{3.6cm}>{\raggedleft\arraybackslash}p{4.2cm}@{}}
+  \rowcolor{atl-primary}\atlhead{خط خروجی} & \atlhead{تعداد دفعات چاپ} & \atlhead{چاپ‌کننده}\\
+  \lr{C:6} & ۱ & \lr{C}\\
+  \lr{C:7} & ۲ & \lr{C1} و \lr{C2}\\
+  \lr{P:2} & ۱ & \lr{P}\\
+\end{tabular}
+\end{center}
+
+در مجموع ۴ خط چاپ می‌شود. \textbf{خیر؛ تغییر متغیر در فرزندان آن را در پردازه‌ی اولیه عوض نمی‌کند.} \code{fork} فضای آدرس را کپی می‌کند (در عمل کپی هنگام نوشتن) و هر پردازه نسخه‌ی خصوصی خودش از \code{x} را دارد؛ نوشتن در یکی برای دیگری دیده نمی‌شود. به همین دلیل \lr{P} همیشه \lr{P:2} چاپ می‌کند.
+
+\subsection*{بخش ج – ترتیب‌های ممکن خروجی و نقش \lr{waitpid}}
+
+قیدها: \lr{P} با \code{waitpid(p, ...)} فقط منتظر پایان \lr{C} می‌ماند و \lr{C} پیش از پایانش \lr{C:6} را چاپ کرده است؛ پس \textbf{\lr{C:6} همیشه پیش از \lr{P:2}} می‌آید. اما \lr{C1} و \lr{C2} فرزندان \lr{C} و نوه‌های \lr{P} هستند و هیچ‌کس منتظرشان نیست؛ دو خط \lr{C:7} هیچ قیدی نسبت به بقیه ندارند. پس کافی است جای دو \lr{C:7} را در چهار خانه انتخاب کنیم (\lr{$\binom{4}{2}=6$} حالت)؛ دو خانه‌ی باقی‌مانده به‌ترتیب با \lr{C:6} و \lr{P:2} پر می‌شوند. دقیقاً \textbf{۶ ترتیب متمایز} داریم:
+
+\begin{center}\small\atlrows
+\begin{tabular}{@{}cllll@{}}
+  \rowcolor{atl-primary}\atlhead{ترتیب} & \atlhead{خط ۱} & \atlhead{خط ۲} & \atlhead{خط ۳} & \atlhead{خط ۴}\\
+  ۱ & \lr{C:6} & \lr{C:7} & \lr{C:7} & \lr{P:2}\\
+  ۲ & \lr{C:6} & \lr{C:7} & \lr{P:2} & \lr{C:7}\\
+  ۳ & \lr{C:6} & \lr{P:2} & \lr{C:7} & \lr{C:7}\\
+  ۴ & \lr{C:7} & \lr{C:6} & \lr{C:7} & \lr{P:2}\\
+  ۵ & \lr{C:7} & \lr{C:6} & \lr{P:2} & \lr{C:7}\\
+  ۶ & \lr{C:7} & \lr{C:7} & \lr{C:6} & \lr{P:2}\\
+\end{tabular}
+\end{center}
+
+(اگر دو \lr{C:7} را به‌عنوان خروجی دو پردازه‌ی جدا بشماریم، ۱۲ اجرای متفاوت داریم که به همین ۶ ترتیب متن می‌رسند. این ۶ ترتیب را در اجرای آزمایشی برنامه هم دیده‌ایم.)
+
+\textbf{آیا \lr{waitpid} تضمین می‌کند \lr{P:2} آخرین خط باشد؟ خیر.} \code{waitpid} فقط پایان \lr{C} را تضمین می‌کند، نه پایان نوه‌هایش را. مثلاً ترتیب سوم (\lr{C:6}، \lr{P:2}، \lr{C:7}، \lr{C:7}): \lr{C} چاپ می‌کند و تمام می‌شود، \lr{P} از \code{waitpid} برمی‌گردد و \lr{P:2} را چاپ می‌کند، و بعد \lr{C1} و \lr{C2} (که تا آن لحظه زمان‌بندی نشده‌اند) چاپ می‌کنند. در ۳ ترتیب از ۶ ترتیب (۱، ۴ و ۶) \lr{P:2} آخر است و در ۳ ترتیب دیگر نیست.
+
+\subsection*{بخش د – جایگزینی \lr{\&\&} با \lr{||}}
+
+حالا عملوند راست فقط وقتی اجرا می‌شود که عملوند چپ \textbf{نادرست} (صفر) باشد؛ یعنی دقیقاً در فرزند \lr{F2}.
+\begin{center}\small\atlrows
+\begin{tabular}{@{}c>{\raggedleft\arraybackslash}p{2.2cm}c>{\raggedleft\arraybackslash}p{4.2cm}>{\raggedleft\arraybackslash}p{4.3cm}@{}}
+  \rowcolor{atl-primary}\atlhead{فراخوانی} & \atlhead{اجراکننده} & \atlhead{ایجادشده} & \atlhead{مقدار بازگشتی در والد} & \atlhead{مقدار بازگشتی در فرزند}\\
+  \lr{F1} & \lr{P} & \lr{C} & شناسه‌ی \lr{C}: شاخه‌ی \code{else} & ۰: شاخه‌ی \code{if}\\
+  \lr{F2} & \lr{C} & \lr{C1} & مثبت: شرط درست؛ \lr{F3} اجرا \textbf{نمی‌شود} & ۰: عملوند دوم اجرا می‌شود\\
+  \lr{F3} & فقط \lr{C1} & \lr{C11} & شناسه‌ی \lr{C11}: شرط درست & ۰: شرط نادرست\\
+\end{tabular}
+\end{center}
+
+\begin{figure}[ht]\centering
+\begin{LTR}
+\begin{tikzpicture}[x=2.1cm, y=1.45cm]
+  \node[pnode, minimum width=26mm] (p) at (0,0) {\lr{P}\\[-1pt]{\scriptsize \lr{x=2}، چاپ \lr{P:2}}};
+  \node[pnode, minimum width=26mm] (c) at (0,-1.5) {\lr{C}\\[-1pt]{\scriptsize \lr{x=6}، چاپ \lr{C:6}}};
+  \node[pnode, minimum width=26mm] (c1) at (0,-3) {\lr{C1}\\[-1pt]{\scriptsize \lr{x=6}، چاپ \lr{C:6}}};
+  \node[pnode, minimum width=26mm] (c11) at (0,-4.5) {\lr{C11}\\[-1pt]{\scriptsize \lr{x=7}، چاپ \lr{C:7}}};
+  \draw[pedge] (p) -- (c); \edgelab{p}{c}{0.5}{\lr{F1}}
+  \draw[pedge] (c) -- (c1); \edgelab{c}{c1}{0.5}{\lr{F2}}
+  \draw[pedge] (c1) -- (c11); \edgelab{c1}{c11}{0.5}{\lr{F3}}
+\end{tikzpicture}
+\end{LTR}
+\caption{درخت پردازه‌ها برای \code{||}: یک زنجیره‌ی چهارتایی.}
+\end{figure}
+
+\lr{C}: \lr{F2} مثبت است، شرط درست می‌شود، \code{x += 1} و \lr{$x=5+1=6$}. \lr{C1}: عملوند چپ صفر است، پس \lr{F3} را اجرا می‌کند و مقدار مثبت می‌گیرد، شرط درست است و \mbox{$x=6$}. \lr{C11}: هر دو صفر، شرط نادرست، \code{x += 2} و \lr{$x=7$}. پس باز هم ۴ پردازه و ۴ خط داریم:
+\begin{itemize}
+  \item \lr{C:6}: \textbf{۲ بار} (از \lr{C} و \lr{C1})؛
+  \item \lr{C:7}: \textbf{۱ بار} (از \lr{C11})؛
+  \item \lr{P:2}: \textbf{۱ بار} (از \lr{P}).
+\end{itemize}

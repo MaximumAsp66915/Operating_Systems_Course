@@ -1,0 +1,26 @@
+% ماکروها و تنظیمات شخصی؛ پس از موتور قالب بارگذاری می‌شود.
+\atldefstr{authortwo}{نگارنده}
+\atldefstr{studentidtwo}{شماره‌ی دانشجویی}
+
+% عبارت‌های لاتین و کد (چپ‌به‌راست) داخل متن فارسی. \mbox جلوی شکستن خط وسط کد را می‌گیرد
+% (شکستن خط در میانه‌ی یک عبارت چپ‌به‌راست، ترتیب پرانتزها را در متن راست‌به‌چپ به‌هم می‌ریزد).
+\newcommand{\code}[1]{\mbox{\lr{\texttt{#1}}}}
+
+% سبک‌های مشترک شکل‌ها. شکل‌ها باید داخل \begin{LTR} باشند؛
+% متن فارسی داخل گره‌ها با \beginR/\endR راست‌به‌چپ می‌شود و هر نوشته‌ی لاتین باید در \lr باشد.
+\tikzset{
+  pnode/.style={draw=atl-primary, fill=atl-tint, rounded corners=3pt, minimum height=8mm,
+    minimum width=13mm, inner sep=3pt, align=center, line width=0.6pt,
+    execute at begin node=\beginR, execute at end node=\endR},
+  pnodez/.style={pnode, draw=atl-accent, fill=atl-accent!22},
+  pedge/.style={->, >=Stealth, line width=0.7pt, color=atl-primary},
+  elab/.style={font=\scriptsize, inner sep=1.5pt, fill=white, align=center,
+    execute at begin node=\beginR, execute at end node=\endR},
+  tlab/.style={font=\scriptsize, inner sep=1pt, align=center,
+    execute at begin node=\beginR, execute at end node=\endR},
+}
+
+% برچسب یال: گره‌ی مستقل در نقطه‌ی میانی یال. گره‌هایی که روی خودِ مسیر (\draw ... -- node ...) قرار می‌گیرند
+% با قلاب‌های \beginR/\endR متن را نشان نمی‌دهند؛ گره‌ی مستقل مشکلی ندارد.
+% \edgelab[گزینه‌ها]{از}{به}{کسر طول}{متن}
+\newcommand{\edgelab}[5][]{\node[elab,#1] at ($(#2)!#4!(#3)$) {#5};}

@@ -1,0 +1,42 @@
+\section{بافر خروجی و \lr{fork}}
+
+طبق مدل صورت سؤال، بافر خروجی بخشی از حافظه‌ی پردازه است؛ پس \code{fork} آن را هم با محتوایش کپی می‌کند و هر پردازه از آن به بعد بافر خصوصی خودش را دارد. بافر در سه حالت تخلیه می‌شود: پر شدن (۲۰ بایت)، ورود \code{\textbackslash n} و پایان عادی پردازه. بزرگ‌ترین محتوای بافر در این برنامه ۸ بایت است (\lr{h b b b\textbackslash n})، پس تخلیه‌ی «پر شدن» هرگز رخ نمی‌دهد.
+
+پردازه‌ی اولیه را \lr{P}، فرزند \code{fork} اول را \lr{C} و فرزند \code{fork} داخل \lr{C} را \lr{Q} می‌نامیم. بافر هر پردازه را مرحله‌به‌مرحله دنبال می‌کنیم (علامت \lr{\textvisiblespace} همان فاصله است):
+
+\begin{center}\small\atlrows
+\begin{tabular}{@{}c>{\raggedleft\arraybackslash}p{2.1cm}>{\raggedleft\arraybackslash}p{5.6cm}>{\raggedleft\arraybackslash}p{4.4cm}@{}}
+  \rowcolor{atl-primary}\atlhead{گام} & \atlhead{پردازه} & \atlhead{رویداد} & \atlhead{بافر و خروجی}\\
+  ۱ & \lr{P} & \code{printf("h ")} & بافر \lr{P}: \lr{h\textvisiblespace}\\
+  ۲ & \lr{P} & \code{fork()}: \lr{C} با نسخه‌ی کپی‌شده‌ی بافر ساخته می‌شود & بافر \lr{C}: \lr{h\textvisiblespace}\\
+  ۳ & \lr{C} & \code{printf("b b ")} & بافر \lr{C}: \lr{h\textvisiblespace b\textvisiblespace b\textvisiblespace}\\
+  ۴ & \lr{C} & \code{fork()}: \lr{Q} نسخه‌ی کپی‌شده را می‌گیرد & بافر \lr{Q}: \lr{h\textvisiblespace b\textvisiblespace b\textvisiblespace}\\
+  ۵ & \lr{P} & \code{printf("b")}؛ سپس \code{waitpid(p, ...)} مسدود می‌شود & بافر \lr{P}: \lr{h\textvisiblespace b} (بدون خروجی)\\
+  ۶ & \lr{Q} & \code{printf("b\textbackslash n")}: ورود \code{\textbackslash n} & \textbf{تخلیه:} \lr{h b b b} و خط جدید\\
+  ۷ & \lr{C} & پس از پایان \lr{Q}، \code{waitpid(q, ...)} برمی‌گردد؛ \code{printf("h\textbackslash n")} & \textbf{تخلیه:} \lr{h b b h} و خط جدید\\
+  ۸ & \lr{C} & \code{printf("b ")}؛ سپس \code{return 0} (پایان عادی) & تخلیه‌ی پایان: \lr{b\textvisiblespace} (بدون خط جدید)\\
+  ۹ & \lr{P} & پس از پایان \lr{C}، \code{waitpid(p, ...)} برمی‌گردد؛ \code{printf("\textbackslash n")} & \textbf{تخلیه:} \lr{h b} و خط جدید\\
+\end{tabular}
+\end{center}
+
+نکته‌ی کلیدی این است که تخلیه‌ی بافر یک پردازه روی بافر پردازه‌های دیگر اثری ندارد: بافر \lr{C} پس از تخلیه‌ی بافر \lr{Q} هنوز \lr{h b b} را دارد، و بافر \lr{P} تمام مدت \lr{h b} است. به همین دلیل «\lr{h\textvisiblespace}» اولیه سه بار چاپ می‌شود (یک بار از هر یک از \lr{P}، \lr{C} و \lr{Q}، چون هر سه آن را در بافرشان دارند)، و در خط آخر خروجی \lr{C} (\lr{b\textvisiblespace}) با خروجی \lr{P} در یک سطر کنار هم می‌افتد، چون خروجی \lr{C} با خط جدید تمام نمی‌شود.
+
+\textbf{خروجی نهایی (با رعایت فاصله‌ها):}
+\begin{codebox}[title=output]{bash}
+h b b b
+h b b h
+b h b
+\end{codebox}
+سطر اول \lr{h\textvisiblespace b\textvisiblespace b\textvisiblespace b} و سطر دوم \lr{h\textvisiblespace b\textvisiblespace b\textvisiblespace h} است (هر دو با خط جدید تمام می‌شوند)؛ سطر سوم از \lr{b\textvisiblespace} (از \lr{C}) و \lr{h\textvisiblespace b\textbackslash n} (از \lr{P}) ساخته می‌شود.
+
+\textbf{چند حالت مختلف خروجی وجود دارد؟ دقیقاً یک حالت.} ترتیب همه‌ی تخلیه‌ها با \code{waitpid} تحمیل می‌شود:
+\begin{itemize}
+  \item \lr{Q} پیش از پایانش بافرش را (با \code{\textbackslash n}) تخلیه می‌کند و \lr{C} فقط پس از پایان \lr{Q} ادامه می‌دهد؛ پس خط اول همیشه اولین است.
+  \item \lr{C} هر دو تخلیه‌ی خودش را پیش از پایان انجام می‌دهد و \lr{P} فقط پس از پایان \lr{C} ادامه می‌دهد؛ پس خط دوم و بعد \lr{b\textvisiblespace} همیشه پیش از تخلیه‌ی \lr{P} می‌آیند.
+  \item تنها کاری که \lr{P} هم‌زمان با بقیه می‌کند \code{printf("b")} است که فقط در بافر خودش می‌نشیند و خروجی ندارد؛ پس هیچ ناهمگامی قابل‌مشاهده‌ای نمی‌ماند.
+\end{itemize}
+بنابراین تنها یک ترتیب ممکن است و خروجی قطعی (\lr{deterministic}) است.
+
+\begin{notebox}
+اگر همین کد را روی \lr{glibc} اجرا کنید، ممکن است «\lr{h}» فقط یک بار چاپ شود؛ چون در نسخه‌های جدید \lr{glibc} خودِ \code{fork()} بافرهای \lr{stdio} را پیش از ساختن فرزند تخلیه می‌کند (در \lr{glibc 2.39} با \code{strace} دیدیم که «\lr{h\textvisiblespace}» پیش از اولین \code{clone} نوشته می‌شود). این رفتار پیاده‌سازی است و با مدل صورت سؤال (کپی‌شدن بافر هنگام \code{fork}) نمی‌خواند؛ پاسخ بالا بر اساس همان مدل است.
+\end{notebox}
