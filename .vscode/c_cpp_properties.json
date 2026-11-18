@@ -1,20 +1,20 @@
-
 {
     "configurations": [
         {
-            "name": "xv6-riscv",
+            "name": "Win32",
             "includePath": [
                 "${workspaceFolder}",
                 "${workspaceFolder}/**"
             ],
-            "defines": [],
-            "compilerPath": "/usr/bin/riscv64-unknown-elf-gcc",
-            "compilerArgs": [
-                "-march=rv64gc",
-                "-mabi=lp64"
+            "defines": [
+                "_DEBUG",
+                "UNICODE",
+                "_UNICODE"
             ],
-            "cStandard": "gnu11",
-            "intelliSenseMode": "linux-gcc-riscv64"
+            "compilerPath": "C:/MinGW/bin/gcc.exe",
+            "cStandard": "c17",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "windows-gcc-x64"
         }
     ],
     "version": 4
