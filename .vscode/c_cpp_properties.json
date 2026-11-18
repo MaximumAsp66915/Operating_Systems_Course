@@ -1,0 +1,22 @@
+
+{
+    "configurations": [
+        {
+            "name": "xv6-riscv",
+            "includePath": [
+                "${workspaceFolder}",
+                "${workspaceFolder}/**"
+            ],
+            "defines": [],
+            "compilerPath": "/usr/bin/riscv64-unknown-elf-gcc",
+            "compilerArgs": [
+                "-march=rv64gc",
+                "-mabi=lp64"
+            ],
+            "cStandard": "gnu11",
+            "intelliSenseMode": "linux-gcc-riscv64"
+        }
+    ],
+    "version": 4
+}
+

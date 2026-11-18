@@ -91,6 +91,9 @@ $K/kernel: $(OBJS) $K/kernel.ld
 $K/%.o: $K/%.S
 	$(CC) -g -c -o $@ $<
 
+$U/%.o: $U/%.S
+	$(CC) $(CFLAGS) -c -o $@ $<
+
 tags: $(OBJS)
 	etags kernel/*.S kernel/*.c
 
@@ -113,6 +116,13 @@ $U/_forktest: $U/forktest.o $(ULIB)
 	$(LD) $(LDFLAGS) -N -e main -Ttext 0 -o $U/_forktest $U/forktest.o $U/ulib.o $U/usys.o
 	$(OBJDUMP) -S $U/_forktest > $U/forktest.asm
 
+$U/_uthread: $U/uthread.o $U/uthread_switch.o $(ULIB)
+	$(LD) $(LDFLAGS) -T $U/user.ld -o $@ $^
+	$(OBJDUMP) -S $@ > $U/uthread.asm
+
+$U/uthread_switch.o: $U/uthread_switch.S
+	$(CC) $(CFLAGS) -c -o $@ $<
+
 mkfs/mkfs: mkfs/mkfs.c $K/fs.h $K/param.h
 	gcc -Wno-unknown-attributes -I. -o mkfs/mkfs mkfs/mkfs.c
 
@@ -125,6 +135,7 @@ mkfs/mkfs: mkfs/mkfs.c $K/fs.h $K/param.h
 UPROGS=\
 	$U/_cat\
 	$U/_pingpong\
+	$U/_uthread\
 	$U/_race\
 	$U/_ps\
 	$U/_treeview\
