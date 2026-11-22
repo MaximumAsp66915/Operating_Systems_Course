@@ -23,3 +23,5 @@
 #define SYS_power  22
 #define SYS_getpinfo 23
 #define SYS_killtree 24
+#define SYS_setpriority 25
+#define SYS_getpriority 26
