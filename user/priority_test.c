@@ -13,7 +13,6 @@ main(void)
     int parent_pid = getpid();
     int start, finish;
 
-    // Create all gates before forking so every child inherits the same table.
     for (i = 0; i < NCHILD; i++) {
         if (pipe(gates[i]) < 0) {
             printf("priority_test: pipe failed\n");
@@ -30,7 +29,6 @@ main(void)
         }
 
         if (pid == 0) {
-            // Keep only this child's read end; close all unrelated descriptors.
             for (j = 0; j < NCHILD; j++) {
                 if (j != i) {
                     close(gates[j][0]);
@@ -39,8 +37,6 @@ main(void)
             }
             close(gates[i][1]);
 
-            // Do not start the CPU-bound workload until the parent has
-            // assigned every child's priority and released all children.
             if (read(gates[i][0], &token, 1) != 1) {
                 exit(1);
             }
@@ -70,8 +66,6 @@ main(void)
                pid, (i + 1) * 10, getpriority(pid));
     }
 
-    // Temporarily keep the parent above all children while opening the gates.
-    // This ensures all five children are RUNNABLE before the workload begins.
     if (setpriority(parent_pid, 100) != 0) {
         printf("priority_test: cannot raise parent priority\n");
         exit(1);
@@ -104,7 +98,6 @@ main(void)
     finish = uptime();
     printf("priority_test: total elapsed time=%d ticks\n", finish - start);
 
-    // A very large PID should not exist in a fresh xv6 run.
     if (setpriority(2147483647, 50) == -1 &&
         getpriority(2147483647) == -1) {
         printf("priority_test: invalid PID handling passed\n");

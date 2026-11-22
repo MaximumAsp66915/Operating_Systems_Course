@@ -37,7 +37,6 @@ main(void)
             }
             close(gates[i][1]);
 
-            // Each child remains blocked until the parent has configured it.
             if (read(gates[i][0], &token, 1) != 1) {
                 exit(1);
             }
@@ -70,17 +69,14 @@ main(void)
     printf("setpriority_test: parent's initial priority=%d\n",
            getpriority(parent_pid));
 
-    // Demonstrate clamping at both ends of the allowed interval.
     setpriority(parent_pid, -10);
     printf("setpriority_test: set -10; clamped priority=%d (expected 0)\n",
            getpriority(parent_pid));
 
-    // Raise the currently running parent. It now outranks both children.
     setpriority(parent_pid, 150);
     printf("setpriority_test: set 150; clamped priority=%d (expected 100)\n",
            getpriority(parent_pid));
 
-    // Release both children while the parent has priority 100.
     for (i = 0; i < NCHILD; i++) {
         if (write(gates[i][1], &token, 1) != 1) {
             printf("setpriority_test: gate write failed\n");
@@ -97,8 +93,8 @@ main(void)
         parent_counter++;
     }
 
-    // Lowering the parent's priority allows child 2 (priority 80) to run
-    // before child 1 (priority 20).
+    printf("setpriority_test: parent work counter=%d\n", parent_counter);
+
     setpriority(parent_pid, -1);
     printf("setpriority_test: parent lowered to priority=%d; children can run\n",
            getpriority(parent_pid));
@@ -109,7 +105,5 @@ main(void)
         printf("setpriority_test: wait returned pid=%d status=%d\n",
                finished_pid, status);
     }
-
-    printf("setpriority_test: parent work counter=%d\n", parent_counter);
     exit(0);
 }
