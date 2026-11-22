@@ -7,6 +7,57 @@
 #include "proc.h"
 #include "vm.h"
 
+extern struct proc proc[NPROC];
+
+uint64
+sys_setpriority(void)
+{
+    int pid;
+    int priority;
+    struct proc *p;
+
+    argint(0, &pid);
+    argint(1, &priority);
+
+    if (priority < 0)
+        priority = 0;
+    if (priority > 100)
+        priority = 100;
+
+    for (p = proc; p < &proc[NPROC]; p++) {
+        acquire(&p->lock);
+        if (p->pid == pid && p->state != UNUSED) {
+            p->priority = priority;
+            release(&p->lock);
+            return 0;
+        }
+        release(&p->lock);
+    }
+
+    return -1;
+}
+
+uint64
+sys_getpriority(void)
+{
+    int pid;
+    struct proc *p;
+
+    argint(0, &pid);
+
+    for (p = proc; p < &proc[NPROC]; p++) {
+        acquire(&p->lock);
+        if (p->pid == pid && p->state != UNUSED) {
+            int priority = p->priority;
+            release(&p->lock);
+            return priority;
+        }
+        release(&p->lock);
+    }
+
+    return -1;
+}
+
 uint64
 sys_exit(void)
 {

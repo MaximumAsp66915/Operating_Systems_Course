@@ -93,6 +93,8 @@ extern uint64 sys_close(void);
 extern uint64 sys_power(void);
 extern uint64 sys_getpinfo(void);
 extern uint64 sys_killtree(void);
+extern uint64 sys_setpriority(void);
+extern uint64 sys_getpriority(void);
 
 
 static uint64 (*syscalls[])(void) = {
@@ -120,6 +122,8 @@ static uint64 (*syscalls[])(void) = {
 [SYS_power]   sys_power,
 [SYS_getpinfo] sys_getpinfo,
 [SYS_killtree] sys_killtree,
+[SYS_setpriority] sys_setpriority,
+[SYS_getpriority] sys_getpriority,
 };
 
 void

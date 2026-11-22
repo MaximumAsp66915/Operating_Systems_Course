@@ -17,6 +17,8 @@ struct spinlock pid_lock;
 
 extern void forkret(void);
 static void freeproc(struct proc *p);
+static struct spinlock priority_rr_lock;
+static int last_run_priority[101];
 
 extern char trampoline[]; // trampoline.S
 
@@ -48,7 +50,9 @@ void
 procinit(void)
 {
   struct proc *p;
-  
+  initlock(&priority_rr_lock, "priority_rr");
+  for (int i = 0; i <= 100; i++)
+    last_run_priority[i] = NPROC - 1;
   initlock(&pid_lock, "nextpid");
   initlock(&wait_lock, "wait_lock");
   for(p = proc; p < &proc[NPROC]; p++) {
@@ -110,7 +114,6 @@ static struct proc*
 allocproc(void)
 {
   struct proc *p;
-
   for(p = proc; p < &proc[NPROC]; p++) {
     acquire(&p->lock);
     if(p->state == UNUSED) {
@@ -127,6 +130,7 @@ found:
   p->birth = ticks;
   release(&tickslock);
   p->state = USED;
+  p->priority = 0;
 
   // Allocate a trapframe page.
   if((p->trapframe = (struct trapframe *)kalloc()) == 0){
@@ -148,7 +152,6 @@ found:
   memset(&p->context, 0, sizeof(p->context));
   p->context.ra = (uint64)forkret;
   p->context.sp = p->kstack + PGSIZE;
-
   return p;
 }
 
@@ -581,44 +584,63 @@ kwait(uint64 addr)
 void
 scheduler(void)
 {
-  struct proc *p;
-  struct cpu *c = mycpu();
+    struct proc *p;
+    struct cpu *c = mycpu();
 
-  c->proc = 0;
-  for(;;){
-    // The most recent process to run may have had interrupts
-    // turned off; enable them to avoid a deadlock if all
-    // processes are waiting. Then turn them back off
-    // to avoid a possible race between an interrupt
-    // and wfi.
-    intr_on();
-    intr_off();
+    c->proc = 0;
 
-    int found = 0;
-    for(p = proc; p < &proc[NPROC]; p++) {
-      acquire(&p->lock);
-      if(p->state == RUNNABLE) {
-        // Switch to chosen process.  It is the process's job
-        // to release its lock and then reacquire it
-        // before jumping back to us.
-        p->state = RUNNING;
-        c->proc = p;
-        swtch(&c->context, &p->context);
+    for (;;) {
+        intr_on();
+        intr_off();
 
-        // Process is done running for now.
-        // It should have changed its p->state before coming back.
-        c->proc = 0;
-        found = 1;
-      }
-      release(&p->lock);
+        int highest = -1;
+        int found = 0;
+
+        acquire(&priority_rr_lock);
+
+        // Find the highest priority among RUNNABLE processes.
+        for (p = proc; p < &proc[NPROC]; p++) {
+            acquire(&p->lock);
+            if (p->state == RUNNABLE && p->priority > highest)
+                highest = p->priority;
+            release(&p->lock);
+        }
+
+        // Round-robin among RUNNABLE processes at that priority.
+        if (highest >= 0) {
+            int start = (last_run_priority[highest] + 1) % NPROC;
+
+            for (int step = 0; step < NPROC; step++) {
+                int index = (start + step) % NPROC;
+                p = &proc[index];
+                acquire(&p->lock);
+
+                if (p->state == RUNNABLE && p->priority == highest) {
+                    p->state = RUNNING;
+                    c->proc = p;
+                    last_run_priority[highest] = index;
+                    found = 1;
+
+                    release(&priority_rr_lock);
+                    swtch(&c->context, &p->context);
+                    mycpu()->intena = 0;
+                    c->proc = 0;
+                    release(&p->lock);
+                    break;
+                }
+
+                release(&p->lock);
+            }
+        }
+
+        if (!found) {
+            release(&priority_rr_lock);
+            // If a priority changed during selection, retry immediately.
+            if (highest < 0)
+                asm volatile("wfi");
+        }
     }
-    if(found == 0) {
-      // nothing to run; stop running on this core until an interrupt.
-      asm volatile("wfi");
-    }
-  }
 }
-
 // Switch to scheduler.  Must hold only p->lock
 // and have changed proc->state. Saves and restores
 // intena because intena is a property of this

@@ -160,7 +160,12 @@ UPROGS=\
 	$U/_forphan\
 	$U/_dorphan\
 	$U/_t_pinfo\
-	$U/_t_killtree
+	$U/_t_killtree\
+	$U/_priority_test\
+	$U/_setpriority_test\
+	$U/_t_priofield\
+	$U/_t_priority\
+	$U/_t_sched
 
 fs.img: mkfs/mkfs README $(UPROGS)
 	mkfs/mkfs fs.img README $(UPROGS)

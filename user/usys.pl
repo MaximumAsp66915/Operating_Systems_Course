@@ -43,3 +43,5 @@ entry("uptime");
 entry("power");
 entry("getpinfo");
 entry("killtree");
+entry("setpriority");
+entry("getpriority");
